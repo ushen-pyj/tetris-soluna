@@ -1,0 +1,3 @@
+[submodule "soluna"]
+	path = soluna
+	url = git@github.com:ushen-pyj/soluna.git
