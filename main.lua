@@ -197,16 +197,24 @@ end
 
 function callback.char(code)
     if game_over then return end
-    if code == 0x250000 then -- left
-        move(-1,0)
-    elseif code == 0x270000 then -- right
-        move(1,0)
-    elseif code == 0x280000 then -- down
-        new_piece_if_needed()
-    elseif code == 0x260000 then -- up
-        rotate()
-    elseif code == 0x20 then -- space
+    if code == 0x20 then -- space 硬降
         hard_drop()
+        return
+    end
+    -- 方向键在当前引擎不会作为 char 事件派发，改用字符键
+    -- 支持两套：WASD 与 IJKL
+    -- 统一转小写处理
+    if code >= 65 and code <= 90 then -- 'A'..'Z'
+        code = code + 32
+    end
+    if code == string.byte('a') or code == string.byte('j') then
+        move(-1, 0)
+    elseif code == string.byte('d') or code == string.byte('l') then
+        move(1, 0)
+    elseif code == string.byte('s') or code == string.byte('k') then
+        new_piece_if_needed()
+    elseif code == string.byte('w') or code == string.byte('i') then
+        rotate()
     end
 end
 
