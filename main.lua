@@ -1,226 +1,76 @@
 local quad = require "soluna.material.quad"
+local ltask = require "ltask"
+local cfg = require "config.game"
 
 local args = ...
 local batch = args.batch
 
 -- 配置
-local GRID_COLS = 10
-local GRID_ROWS = 20
-local CELL = 28
+local GRID_COLS = cfg.GRID_COLS
+local GRID_ROWS = cfg.GRID_ROWS
+local CELL = cfg.CELL
 local BOARD_X = math.floor((args.width - GRID_COLS * CELL) / 2)
 local BOARD_Y = math.floor((args.height - GRID_ROWS * CELL) / 2)
 
--- 形状定义（I O T S Z J L）旋转态
-local SHAPES = {
-    I = {
-        {{0,1,0,0},{0,1,0,0},{0,1,0,0},{0,1,0,0}},
-        {{0,0,0,0},{1,1,1,1},{0,0,0,0},{0,0,0,0}},
-    },
-    O = {
-        {{0,0,0,0},{0,1,1,0},{0,1,1,0},{0,0,0,0}},
-    },
-    T = {
-        {{0,0,0,0},{1,1,1,0},{0,1,0,0},{0,0,0,0}},
-        {{0,1,0,0},{1,1,0,0},{0,1,0,0},{0,0,0,0}},
-        {{0,1,0,0},{1,1,1,0},{0,0,0,0},{0,0,0,0}},
-        {{0,1,0,0},{0,1,1,0},{0,1,0,0},{0,0,0,0}},
-    },
-    S = {
-        {{0,0,0,0},{0,1,1,0},{1,1,0,0},{0,0,0,0}},
-        {{1,0,0,0},{1,1,0,0},{0,1,0,0},{0,0,0,0}},
-    },
-    Z = {
-        {{0,0,0,0},{1,1,0,0},{0,1,1,0},{0,0,0,0}},
-        {{0,1,0,0},{1,1,0,0},{1,0,0,0},{0,0,0,0}},
-    },
-    J = {
-        {{0,0,0,0},{1,1,1,0},{0,0,1,0},{0,0,0,0}},
-        {{0,1,0,0},{0,1,0,0},{1,1,0,0},{0,0,0,0}},
-        {{1,0,0,0},{1,1,1,0},{0,0,0,0},{0,0,0,0}},
-        {{0,1,1,0},{0,1,0,0},{0,1,0,0},{0,0,0,0}},
-    },
-    L = {
-        {{0,0,0,0},{1,1,1,0},{1,0,0,0},{0,0,0,0}},
-        {{1,1,0,0},{0,1,0,0},{0,1,0,0},{0,0,0,0}},
-        {{0,0,1,0},{1,1,1,0},{0,0,0,0},{0,0,0,0}},
-        {{0,1,0,0},{0,1,0,0},{0,1,1,0},{0,0,0,0}},
-    },
-}
-
-local COLORS = {
-    I = 0x17bebb,
-    O = 0xfad000,
-    T = 0x9b5de5,
-    S = 0x00c2a8,
-    Z = 0xff595e,
-    J = 0x277da1,
-    L = 0xf9844a,
-    G = 0x1f1f1f, -- grid
-}
-
-local function new_grid()
-    local g = {}
-    for r=1,GRID_ROWS do
-        local row = {}
-        for c=1,GRID_COLS do row[c] = false end
-        g[r] = row
-    end
-    return g
-end
-
-local grid = new_grid()
-
-local rng = math.random
-local bag = {"I","O","T","S","Z","J","L"}
-local function next_shape()
-    return bag[rng(1,#bag)]
-end
-
-local cur = {kind=nil, rot=1, r=1, c=4}
-local drop_timer = 0
-local drop_interval = 0.6
-local score = 0
-local game_over = false
+local COLORS = cfg.COLORS
+local SHAPES = cfg.SHAPES
 
 local function shape_matrix(kind, rot)
     local mats = SHAPES[kind]
     return mats[(rot-1) % #mats + 1]
 end
 
-local function can_place(kind, rot, r, c)
-    local m = shape_matrix(kind, rot)
-    for i=1,4 do
-        for j=1,4 do
-            if m[i][j] == 1 then
-                local rr = r + i - 1
-                local cc = c + j - 1
-                if rr < 1 or rr > GRID_ROWS or cc < 1 or cc > GRID_COLS then
-                    return false
-                end
-                if grid[rr][cc] then return false end
-            end
-        end
-    end
-    return true
-end
+local logic_addr
+local snapshot
 
-local function lock_piece()
-    local m = shape_matrix(cur.kind, cur.rot)
-    for i=1,4 do for j=1,4 do if m[i][j]==1 then
-        local rr = cur.r + i - 1
-        local cc = cur.c + j - 1
-        grid[rr][cc] = cur.kind
-    end end end
-end
-
-local function spawn()
-    cur.kind = next_shape()
-    cur.rot = 1
-    cur.r = 1
-    cur.c = 4
-    if not can_place(cur.kind, cur.rot, cur.r, cur.c) then
-        game_over = true
+local function ensure_logic()
+    if not logic_addr then
+        logic_addr = ltask.uniqueservice "service.tetris_logic"
+        ltask.call(logic_addr, "init", cfg)
     end
 end
-
-local function clear_lines()
-    local cleared = 0
-    for r=GRID_ROWS,1,-1 do
-        local full = true
-        for c=1,GRID_COLS do if not grid[r][c] then full=false break end end
-        if full then
-            table.remove(grid, r)
-            table.insert(grid, 1, (function()
-                local row = {}
-                for c=1,GRID_COLS do row[c]=false end
-                return row
-            end)())
-            cleared = cleared + 1
-        end
-    end
-    if cleared == 1 then score = score + 100
-    elseif cleared == 2 then score = score + 300
-    elseif cleared == 3 then score = score + 500
-    elseif cleared >= 4 then score = score + 800 end
-end
-
-local function hard_drop()
-    while can_place(cur.kind, cur.rot, cur.r+1, cur.c) do
-        cur.r = cur.r + 1
-    end
-    lock_piece()
-    clear_lines()
-    spawn()
-end
-
-local function move(dx, dy)
-    local nr, nc = cur.r + dy, cur.c + dx
-    if can_place(cur.kind, cur.rot, nr, nc) then
-        cur.r, cur.c = nr, nc
-        return true
-    end
-end
-
-local function rotate()
-    local nr = cur.rot + 1
-    if can_place(cur.kind, nr, cur.r, cur.c) then
-        cur.rot = nr
-        return
-    end
-    -- 简单踢墙
-    if can_place(cur.kind, nr, cur.r, cur.c-1) then cur.rot = nr return end
-    if can_place(cur.kind, nr, cur.r, cur.c+1) then cur.rot = nr return end
-end
-
-local function new_piece_if_needed()
-    if not can_place(cur.kind, cur.rot, cur.r+1, cur.c) then
-        lock_piece()
-        clear_lines()
-        spawn()
-    else
-        cur.r = cur.r + 1
-    end
-end
-
-spawn()
 
 local callback = {}
 
 function callback.mouse_button(btn, down)
-    if down and game_over then
-        grid = new_grid()
-        score = 0
-        game_over = false
-        spawn()
+    ensure_logic()
+    if down and snapshot and snapshot.game_over then
+        ltask.call(logic_addr, "reset")
     end
 end
 
 function callback.char(code)
-    if game_over then return end
-    if code == 0x20 then -- space 硬降
-        hard_drop()
+    ensure_logic()
+    if not snapshot or snapshot.game_over then return end
+    if code == 0x20 then
+        ltask.call(logic_addr, "hard_drop")
         return
     end
-    -- 方向键在当前引擎不会作为 char 事件派发，改用字符键
-    -- 支持两套：WASD 与 IJKL
-    -- 统一转小写处理
-    if code >= 65 and code <= 90 then -- 'A'..'Z'
+    if code >= 65 and code <= 90 then
         code = code + 32
     end
     if code == string.byte('a') or code == string.byte('j') then
-        move(-1, 0)
+        ltask.call(logic_addr, "move", -1, 0)
     elseif code == string.byte('d') or code == string.byte('l') then
-        move(1, 0)
+        ltask.call(logic_addr, "move", 1, 0)
     elseif code == string.byte('s') or code == string.byte('k') then
-        new_piece_if_needed()
+        ltask.call(logic_addr, "soft_drop_step")
     elseif code == string.byte('w') or code == string.byte('i') then
-        rotate()
+        ltask.call(logic_addr, "rotate")
     end
 end
 
 function callback.frame(count)
+    ensure_logic()
+    snapshot = ltask.call(logic_addr, "snapshot")
+
+    local grid = snapshot.grid
+    local cur = snapshot.cur
+    local game_over = snapshot.game_over
+    local next_kind = snapshot.next_kind
+    local score = snapshot.score
+
     batch:layer(BOARD_X, BOARD_Y)
-        -- 背景
         for r=1,GRID_ROWS do
             for c=1,GRID_COLS do
                 local x = (c-1) * CELL
@@ -229,7 +79,6 @@ function callback.frame(count)
             end
         end
 
-        -- 固定块
         for r=1,GRID_ROWS do
             for c=1,GRID_COLS do
                 local k = grid[r][c]
@@ -242,7 +91,6 @@ function callback.frame(count)
             end
         end
 
-        -- 当前下落块
         if not game_over then
             local m = shape_matrix(cur.kind, cur.rot)
             local col = COLORS[cur.kind]
@@ -256,14 +104,45 @@ function callback.frame(count)
         end
     batch:layer()
 
-    -- 下落节奏
-    if not game_over then
-        drop_timer = drop_timer + 1/60
-        if drop_timer >= drop_interval then
-            drop_timer = drop_timer - drop_interval
-            new_piece_if_needed()
+    -- 右侧面板：预览下一块 + 分数
+    local side_x = BOARD_X + GRID_COLS * CELL + 24
+    local side_y = BOARD_Y
+    batch:layer(0, 0)
+        -- 预览标题框（简单用方块拼）
+        if next_kind then
+            local preview_cell = math.floor(CELL * 0.8)
+            local px = side_x
+            local py = side_y
+            -- 背板
+            for rr=0,3 do
+                for cc=0,3 do
+                    batch:add(quad.quad(preview_cell-2, preview_cell-2, 0x2a2a2a), px + cc*preview_cell + 1, py + rr*preview_cell + 1)
+                end
+            end
+            local pm = shape_matrix(next_kind, 1)
+            local pcol = COLORS[next_kind]
+            for i=1,4 do for j=1,4 do if pm[i][j]==1 then
+                local x = px + (j-1) * preview_cell
+                local y = py + (i-1) * preview_cell
+                batch:add(quad.quad(preview_cell-4, preview_cell-4, pcol), x+2, y+2)
+            end end end
+            side_y = py + 4*preview_cell + 24
         end
-    end
+
+        -- 分数：用固定宽度条形显示（每一位用十个格组成的数码管简化为长度条叠加）
+        do
+            local bar_w = CELL * 3
+            local bar_h = CELL - 8
+            local sx = side_x
+            local sy = side_y
+            batch:add(quad.quad(bar_w, bar_h, 0x444444), sx, sy)
+            local maxw = bar_w - 6
+            local ratio = math.min(1, (score % 1000) / 1000)
+            local fillw = math.floor(maxw * ratio)
+            batch:add(quad.quad(fillw, bar_h-6, 0xf0c808), sx+3, sy+3)
+            -- 分数格子提示（千分位循环，不依赖文字材质）
+        end
+    batch:layer()
 end
 
 return callback
