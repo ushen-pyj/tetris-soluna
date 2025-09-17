@@ -1,11 +1,12 @@
+-- 游戏常量定义
 local M = {}
 
--- 基础配置
+-- 游戏网格配置
 M.GRID_COLS = 10
 M.GRID_ROWS = 20
-M.CELL = 28
+M.CELL_SIZE = 28
 
--- 形状定义
+-- 游戏形状定义
 M.SHAPES = {
     I = {
         {{0,1,0,0},{0,1,0,0},{0,1,0,0},{0,1,0,0}},
@@ -42,18 +43,33 @@ M.SHAPES = {
     },
 }
 
--- 颜色
+-- 颜色定义
 M.COLORS = {
-    I = 0x17bebb,
-    O = 0xfad000,
-    T = 0x9b5de5,
-    S = 0x00c2a8,
-    Z = 0xff595e,
-    J = 0x277da1,
-    L = 0xf9844a,
-    G = 0x1f1f1f,
+    I = 0x17bebb,    -- 青色
+    O = 0xfad000,    -- 黄色
+    T = 0x9b5de5,    -- 紫色
+    S = 0x00c2a8,    -- 青绿色
+    Z = 0xff595e,    -- 红色
+    J = 0x277da1,    -- 蓝色
+    L = 0xf9844a,    -- 橙色
+    G = 0x1f1f1f,    -- 灰色（网格）
+}
+
+-- 输入键位定义
+M.KEYS = {
+    MOVE_LEFT = {'a', 'j'},
+    MOVE_RIGHT = {'d', 'l'},
+    SOFT_DROP = {'s', 'k'},
+    ROTATE = {'w', 'i'},
+    HARD_DROP = ' ',
+}
+
+-- 游戏状态常量
+M.GAME_STATES = {
+    START_SCREEN = "start_screen",
+    PLAYING = "playing",
+    PAUSED = "paused",
+    GAME_OVER = "game_over",
 }
 
 return M
-
-
