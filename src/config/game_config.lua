@@ -11,7 +11,7 @@ M.GRID_ROWS = constants.GRID_ROWS
 M.CELL = constants.CELL_SIZE
 
 -- 游戏难度配置
-M.DROP_INTERVAL = 0.6  -- 基础下落间隔（秒）
+M.DROP_INTERVAL = 1  -- 基础下落间隔（秒）
 M.LEVEL_SPEED_INCREASE = 0.1  -- 每级速度增加
 
 -- 计分配置
