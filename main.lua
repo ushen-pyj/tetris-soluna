@@ -5,6 +5,7 @@ local ltask = require "ltask"
 local constants = require "src.core.constants"
 local globals = require "src.core.globals"
 local game_config = require "src.config.game_config"
+local font_init = require "src.core.font_init"
 
 -- 导入UI模块
 local game_board = require "src.ui.game_board"
@@ -15,6 +16,20 @@ local start_screen = require "src.ui.start_screen"
 local input_handler = require "src.input.input_handler"
 
 local args = ...
+
+local font_initialized = false
+
+-- 执行字体初始化（只在第一帧执行一次）
+local function do_font_init()
+    if font_initialized then return end
+    font_initialized = true
+    local success = font_init.init()
+    if success then
+        print("字体系统初始化成功")
+    else
+        print("字体系统初始化失败，但游戏将继续运行")
+    end
+end
 local batch = args.batch
 local width = args.width or globals.screen_width
 local height = args.height or globals.screen_height
@@ -38,6 +53,14 @@ end
 
 -- 回调函数集合
 local callback = {}
+
+function callback.init()
+    print("init")
+end
+
+function callback.event(ev)
+    print("event: ", ev)
+end
 
 -- 鼠标移动回调
 function callback.mouse_move(x, y)
@@ -109,6 +132,9 @@ end
 
 -- 帧渲染回调
 function callback.frame(count)
+    -- 在第一帧执行字体初始化
+    do_font_init()
+    
     -- 根据游戏状态渲染不同界面
     if globals.game_state == constants.GAME_STATES.START_SCREEN then
         -- 渲染开始界面

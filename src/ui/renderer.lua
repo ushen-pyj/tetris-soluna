@@ -3,7 +3,8 @@ local quad = require "soluna.material.quad"
 local constants = require "src.core.constants"
 local ui_config = require "src.config.ui_config"
 local game_config = require "src.config.game_config"
-
+local text_material = require "soluna.material.text"
+local font_api = require "soluna.font"
 
 local M = {}
 
@@ -157,87 +158,48 @@ function M.render_text(batch, str, x, y, size, color)
     size = size or 16
     color = color or 0xFFFFFFFF
     
-    -- 确保字体已初始化（延迟初始化）
-    if not M._font_init_attempted then
-        M._font_init_attempted = true
-        local font_init = require "src.core.font_init"
-        M._font_init_success = font_init.init()
-    end
-    
-    -- 只有在字体初始化成功时才尝试使用text material
-    if M._font_init_success then
-        local ok, text_material = pcall(require, "soluna.material.text")
-        if ok and text_material then
-            local font_ok, font_api = pcall(require, "soluna.font")
-            if font_ok and font_api then
-                -- 获取字体管理器对象（注意：cobj是函数，需要调用）
-                local font_mgr = font_api.cobj()
-                if font_mgr then
-                    -- 使用正确的API创建text block
-                    -- text_material.block(font_manager, font_id, font_size, color, alignment)
-                    -- 确保颜色格式正确（需要包含alpha通道）
-                    local fixed_color = color
-                    if (fixed_color & 0xFF000000) == 0 then
-                        fixed_color = fixed_color | 0xFF000000
-                    end
-                    
-                    -- 获取字体ID
-                    local font_id = 0
-                    local name_ok, font_name_id = pcall(font_api.name, "")
-                    if name_ok and font_name_id then
-                        font_id = font_name_id
-                    end
-                    
-                    
-                    local test_size = size
-                    local test_color = fixed_color
-                    
-                    local block_ok, text_block = pcall(text_material.block, font_mgr, font_id, test_size, test_color, "")
-                    if block_ok and text_block then
-                        local prim_ok, text_primitives = pcall(text_block, str)
-                        if prim_ok and text_primitives then
-                            local offset_y = y - 2046  -- 修正Y坐标偏移
-                            batch:add(text_primitives, x, offset_y)
-                            if game_config.debug then
-                                M.debug_text(batch, text_primitives, x, offset_y)
-                            end
-                            return -- text_block 渲染完成
-                        else
-                            print("text_block failed for '" .. str .. "':", text_primitives)
-                        end
-                    else
-                        print("Failed to create text block:", text_block)
-                    end
-                else
-                    print("Failed to get font manager object")
+    -- 获取字体管理器对象（注意：cobj是函数，需要调用）
+    local font_mgr = font_api.cobj()
+    if font_mgr then
+        -- 使用正确的API创建text block
+        -- text_material.block(font_manager, font_id, font_size, color, alignment)
+        -- 确保颜色格式正确（需要包含alpha通道）
+        local fixed_color = color
+        if (fixed_color & 0xFF000000) == 0 then
+            fixed_color = fixed_color | 0xFF000000
+        end
+        
+        -- 获取字体ID
+        local font_id = 0
+        local name_ok, font_name_id = pcall(font_api.name, "")
+        if name_ok and font_name_id then
+            font_id = font_name_id
+        end
+        
+        
+        local test_size = size
+        local test_color = fixed_color
+        
+        local block_ok, text_block = pcall(text_material.block, font_mgr, font_id, test_size, test_color, "")
+        if block_ok and text_block then
+            local prim_ok, text_primitives = pcall(text_block, str)
+            if prim_ok and text_primitives then
+                local offset_y = y - 2046  -- 修正Y坐标偏移
+                batch:add(text_primitives, x, offset_y)
+                if game_config.debug then
+                    M.debug_text(batch, text_primitives, x, offset_y)
                 end
+                return -- text_block 渲染完成
             else
-                print("Failed to require soluna.font:", font_api)
+                print("text_block failed for '" .. str .. "':", text_primitives)
             end
         else
-            print("Failed to require soluna.material.text:", text_material)
+            print("Failed to create text block:", text_block)
         end
     else
-        print("Font initialization failed or not attempted")
+        print("Failed to get font manager object")
     end
-    
-    
-    -- 最终回退方案：使用方块代替文字
-    M._render_text_fallback(batch, str, x, y, size, color)
-end
 
-
--- 文字渲染回退方案
-function M._render_text_fallback(batch, str, x, y, size, color)
-    local char_x = math.floor(x)
-    local char_width = math.floor(size * 0.8)
-    local char_height = math.floor(size)
-    
-    for i = 1, #str do
-        -- 使用小方块表示每个字符
-        batch:add(quad.quad(char_width, char_height, color), char_x, y)
-        char_x = char_x + char_width + 2  -- 字符间距
-    end
 end
 
 -- 渲染分数条（保留原有功能）
