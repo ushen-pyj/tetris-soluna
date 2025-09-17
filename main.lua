@@ -25,6 +25,9 @@ globals.calculate_board_position(width, height)
 -- 游戏逻辑服务
 local logic_addr
 
+-- 鼠标位置跟踪
+local mouse_x, mouse_y = 0, 0
+
 -- 确保逻辑服务已初始化
 local function ensure_logic()
     if not logic_addr then
@@ -36,18 +39,18 @@ end
 -- 回调函数集合
 local callback = {}
 
+-- 鼠标移动回调
+function callback.mouse_move(x, y)
+    mouse_x, mouse_y = x, y
+end
+
 -- 鼠标按键回调
-function callback.mouse_button(btn, down, x, y)
+function callback.mouse_button(btn, down)
     -- 处理开始界面点击
     if globals.game_state == constants.GAME_STATES.START_SCREEN then
         if down and btn == 0 then  -- 左键按下
-            -- 如果没有坐标信息，直接开始游戏
-            if not x or not y then
-                globals.game_state = constants.GAME_STATES.PLAYING
-                ensure_logic()
-                return
-            end
-            if start_screen.is_start_button_clicked(x, y, width, height) then
+            -- 使用跟踪的鼠标位置检查是否点击了开始按钮
+            if start_screen.is_start_button_clicked(mouse_x, mouse_y, width, height) then
                 globals.game_state = constants.GAME_STATES.PLAYING
                 ensure_logic()
                 return

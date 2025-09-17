@@ -3,6 +3,8 @@ local constants = require "src.core.constants"
 
 local M = {}
 
+M.debug = false
+
 -- 游戏基础配置
 M.GRID_COLS = constants.GRID_COLS
 M.GRID_ROWS = constants.GRID_ROWS

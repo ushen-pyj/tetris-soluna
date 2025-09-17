@@ -1,6 +1,6 @@
 -- 开始界面UI模块
 local renderer = require "src.ui.renderer"
-local constants = require "src.core.constants"
+local quad = require "soluna.material.quad"
 
 local M = {}
 
@@ -21,7 +21,6 @@ function M.render(batch, screen_width, screen_height)
     renderer.render_text(batch, title, title_x, title_y, title_size, 0xFF00FF)
     
     -- 渲染开始按钮背景
-    local quad = require "soluna.material.quad"
     local button_width = 160
     local button_height = 40
     local button_x = math.floor(center_x - button_width / 2)
