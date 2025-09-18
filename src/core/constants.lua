@@ -43,25 +43,44 @@ M.SHAPES = {
     },
 }
 
--- 颜色定义
+-- 颜色定义 - 已移动到 src/core/colors.lua
+local colors = require "src.core.colors"
 M.COLORS = {
-    I = 0x17bebb,    -- 青色
-    O = 0xfad000,    -- 黄色
-    T = 0x9b5de5,    -- 紫色
-    S = 0x00c2a8,    -- 青绿色
-    Z = 0xff595e,    -- 红色
-    J = 0x277da1,    -- 蓝色
-    L = 0xf9844a,    -- 橙色
-    G = 0x1f1f1f,    -- 灰色（网格）
+    I = colors.PIECE_I,    -- 青色
+    O = colors.PIECE_O,    -- 黄色
+    T = colors.PIECE_T,    -- 紫色
+    S = colors.PIECE_S,    -- 青绿色
+    Z = colors.PIECE_Z,    -- 红色
+    J = colors.PIECE_J,    -- 蓝色
+    L = colors.PIECE_L,    -- 橙色
+    G = colors.PIECE_GRID, -- 灰色（网格）
 }
 
--- 输入键位定义
+-- 输入键位定义（使用sokol键码）
 M.KEYS = {
-    MOVE_LEFT = {'a', 'j'},
-    MOVE_RIGHT = {'d', 'l'},
-    SOFT_DROP = {'s', 'k'},
-    ROTATE = {'w', 'i'},
-    HARD_DROP = ' ',
+    MOVE_LEFT = {65, 74},  -- A, J键
+    MOVE_RIGHT = {68, 76}, -- D, L键
+    SOFT_DROP = {83, 75},  -- S, K键
+    ROTATE = {87, 73},     -- W, I键
+    HARD_DROP = 32,        -- 空格键
+}
+
+-- 双人模式键位定义（使用sokol键码）
+M.DUAL_KEYS = {
+    PLAYER1 = {
+        MOVE_LEFT = 65,   -- A键
+        MOVE_RIGHT = 68,  -- D键
+        SOFT_DROP = 83,   -- S键
+        ROTATE = 87,      -- W键
+        HARD_DROP = 32,   -- 空格键
+    },
+    PLAYER2 = {
+        MOVE_LEFT = 263,   -- 左）
+        MOVE_RIGHT = 262,  -- 右）
+        SOFT_DROP = 264,   -- （下）
+        ROTATE = 265,      -- 上）
+        HARD_DROP = 335,  -- Enter键 数字键盘（硬降）
+    },
 }
 
 -- 游戏状态常量
@@ -70,6 +89,12 @@ M.GAME_STATES = {
     PLAYING = "playing",
     PAUSED = "paused",
     GAME_OVER = "game_over",
+}
+
+-- 游戏模式常量
+M.GAME_MODES = {
+    SINGLE = "single",
+    DUAL = "dual",
 }
 
 return M

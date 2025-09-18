@@ -1,6 +1,7 @@
 -- 主渲染器
 local quad = require "soluna.material.quad"
 local constants = require "src.core.constants"
+local colors = require "src.core.colors"
 local ui_config = require "src.config.ui_config"
 local game_config = require "src.config.game_config"
 local text_material = require "soluna.material.text"
@@ -103,30 +104,30 @@ function M.render_score_display(batch, x, y, game_state)
     
     -- 渲染分数标题
     local title_y = sy
-    M.render_text(batch, "SCORE", sx, title_y, 12, 0xFFFFFF)
+    M.render_text(batch, "SCORE", sx, title_y, 12, colors.SCORE_TITLE)
     
     -- 渲染分数数值
     local score_y = title_y + 18
     local score_text = tostring(game_state.score)
-    M.render_text(batch, score_text, sx, score_y, 14, 0xFFFF00)
+    M.render_text(batch, score_text, sx, score_y, 14, colors.SCORE_VALUE)
     
     -- 渲染等级标题
     local level_y = score_y + 24
-    M.render_text(batch, "LEVEL", sx, level_y, 12, 0xFFFFFF)
+    M.render_text(batch, "LEVEL", sx, level_y, 12, colors.LEVEL_TITLE)
     
     -- 渲染等级数值
     local level_val_y = level_y + 18
     local level_text = tostring(game_state.level)
-    M.render_text(batch, level_text, sx, level_val_y, 14, 0x00FF00)
+    M.render_text(batch, level_text, sx, level_val_y, 14, colors.LEVEL_VALUE)
     
     -- 渲染行数标题
     local lines_y = level_val_y + 24
-    M.render_text(batch, "LINES", sx, lines_y, 12, 0xFFFFFF)
+    M.render_text(batch, "LINES", sx, lines_y, 12, colors.LINES_TITLE)
     
     -- 渲染行数数值
     local lines_val_y = lines_y + 18
     local lines_text = tostring(game_state.lines_cleared)
-    M.render_text(batch, lines_text, sx, lines_val_y, 14, 0x00FFFF)
+    M.render_text(batch, lines_text, sx, lines_val_y, 14, colors.LINES_VALUE)
     
     batch:layer()
     
@@ -156,7 +157,7 @@ function M.render_text(batch, str, x, y, size, color)
     end
     
     size = size or 16
-    color = color or 0xFFFFFFFF
+    color = color or colors.DEFAULT_TEXT
     
     -- 获取字体管理器对象（注意：cobj是函数，需要调用）
     local font_mgr = font_api.cobj()
@@ -217,6 +218,27 @@ function M.render_score_bar(batch, x, y, score)
     local ratio = math.min(1, (score % 1000) / 1000)
     local fillw = math.floor(maxw * ratio)
     batch:add(quad.quad(fillw, bar_h-6, ui_config.SCORE_BAR_FILL_COLOR), sx+3, sy+3)
+    batch:layer()
+end
+
+-- 渲染小型方块（用于双人模式预览）
+function M.render_mini_piece(batch, x, y, kind)
+    if not kind then return end
+    
+    local mini_cell = 8  -- 小型方块的单元格大小
+    local m = M.shape_matrix(kind, 1)
+    local col = constants.COLORS[kind]
+    
+    batch:layer(0, 0)
+    for i=1,4 do 
+        for j=1,4 do 
+            if m[i][j]==1 then
+                local mini_x = x + (j-1) * mini_cell
+                local mini_y = y + (i-1) * mini_cell
+                batch:add(quad.quad(mini_cell-2, mini_cell-2, col), mini_x+1, mini_y+1)
+            end 
+        end 
+    end
     batch:layer()
 end
 

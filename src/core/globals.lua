@@ -5,6 +5,7 @@ local M = {}
 
 -- 游戏全局状态
 M.game_state = constants.GAME_STATES.START_SCREEN
+M.game_mode = constants.GAME_MODES.SINGLE  -- 当前游戏模式
 M.score = 0
 M.level = 1
 M.lines_cleared = 0
