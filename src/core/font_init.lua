@@ -1,12 +1,9 @@
--- 字体初始化模块
 local M = {}
 
--- 尝试加载系统字体的函数
 local function try_load_system_fonts()
     local font_system = require "soluna.font.system"
     local font = require "soluna.font"
     
-    -- 尝试加载常见的系统字体
     local font_names = {"Arial", "SimSun", "Microsoft YaHei", "DejaVu Sans", "Liberation Sans", "Tahoma", "Verdana", ""}
     
     for _, font_name in ipairs(font_names) do
@@ -17,7 +14,6 @@ local function try_load_system_fonts()
             if import_ok then
                 print("成功加载字体:", font_name == "" and "默认字体" or font_name)
                 
-                -- 尝试获取字体ID来验证加载
                 local name_ok, font_id = pcall(font.name, font_name)
                 if name_ok and font_id then
                     print("字体ID:", font_id)

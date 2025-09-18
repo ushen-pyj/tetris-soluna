@@ -197,7 +197,6 @@ function callback.frame(count)
         local snapshot = ltask.call(current_logic, "snapshot")
         if not snapshot then return end
         
-        -- 缓存snapshot和game_over状态
         cached_snapshot = snapshot
         if globals.game_mode == constants.GAME_MODES.SINGLE then
             cached_game_over = snapshot.game_over

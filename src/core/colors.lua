@@ -1,5 +1,5 @@
 -- 游戏颜色常量定义
--- 所有颜色值都使用十六进制格式，避免魔法数字
+-- 所有颜色值都使用十六进制格式
 
 local M = {}
 
@@ -61,5 +61,9 @@ M.PREVIEW_BACKGROUND = 0x2a2a2a  -- 预览区域背景（深灰色）
 
 -- 默认颜色（带alpha通道）
 M.DEFAULT_TEXT = 0xFFFFFFFF      -- 默认文字颜色（白色，带alpha）
+
+-- Alpha通道相关常量
+M.ALPHA_MASK = 0xFF000000        -- Alpha通道掩码（用于确保颜色有alpha通道）
+M.NO_ALPHA_MASK = 0x00FFFFFF     -- 无alpha通道掩码（用于检查是否缺少alpha通道）
 
 return M

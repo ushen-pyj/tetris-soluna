@@ -5,32 +5,25 @@ local quad = require "soluna.material.quad"
 
 local M = {}
 
--- 渲染按钮
 local function render_button(batch, x, y, width, height, text, text_size, bg_color, border_color, text_color)
-    -- 按钮背景
     batch:add(quad.quad(width, height, bg_color), x, y)
-    -- 按钮边框
     batch:add(quad.quad(width, 2, border_color), x, y)
     batch:add(quad.quad(width, 2, border_color), x, y + height - 2)
     batch:add(quad.quad(2, height, border_color), x, y)
     batch:add(quad.quad(2, height, border_color), x + width - 2, y)
     
-    -- 按钮文字
     local text_width = #text * text_size * 0.6
     local text_x = math.floor(x + width / 2 - text_width / 2)
     local text_y = y + math.floor((height - text_size) / 2) + 2
     renderer.render_text(batch, text, text_x, text_y, text_size, text_color)
 end
 
--- 渲染开始界面
 function M.render(batch, screen_width, screen_height)
     batch:layer(0, 0)
     
-    -- 计算中心位置
     local center_x = math.floor(screen_width / 2)
     local center_y = math.floor(screen_height / 2)
     
-    -- 渲染游戏标题
     local title = "TETRIS"
     local title_size = 24
     local title_width = #title * title_size * 0.6
@@ -38,24 +31,20 @@ function M.render(batch, screen_width, screen_height)
     local title_y = center_y - 100
     renderer.render_text(batch, title, title_x, title_y, title_size, colors.TITLE_TEXT)
     
-    -- 按钮配置
     local button_width = 160
     local button_height = 40
     local button_spacing = 20
     
-    -- 单人模式按钮
     local single_button_x = math.floor(center_x - button_width / 2)
     local single_button_y = center_y - 30
     render_button(batch, single_button_x, single_button_y, button_width, button_height, 
                   "SINGLE PLAYER", 14, colors.BUTTON_BACKGROUND, colors.BUTTON_TEXT, colors.BUTTON_BORDER)
     
-    -- 双人模式按钮
     local dual_button_x = math.floor(center_x - button_width / 2)
     local dual_button_y = single_button_y + button_height + button_spacing
     render_button(batch, dual_button_x, dual_button_y, button_width, button_height, 
                   "DUAL PLAYER", 14, colors.BUTTON_BACKGROUND, colors.BUTTON_TEXT, colors.BUTTON_BORDER)
     
-    -- 渲染控制说明
     local controls_y = center_y + 80
     local control_size = 11
     
@@ -68,7 +57,6 @@ function M.render(batch, screen_width, screen_height)
     renderer.render_text(batch, "DUAL PLAYER CONTROLS:", center_x - 75, controls_y + 85, control_size, colors.CONTROL_HINT)
     renderer.render_text(batch, "1P: WASD + SPACE  |  2P: 4826 + ENTER", center_x - 100, controls_y + 100, control_size, colors.CONTROL_TEXT)
     
-    -- 渲染点击提示
     local hint_text = "Click a button to select game mode!"
     local hint_size = 12
     local hint_width = #hint_text * hint_size * 0.6
@@ -79,7 +67,6 @@ function M.render(batch, screen_width, screen_height)
     batch:layer()
 end
 
--- 检查是否点击了单人模式按钮
 function M.is_single_button_clicked(mouse_x, mouse_y, screen_width, screen_height)
     -- 检查参数有效性
     if not mouse_x or not mouse_y or not screen_width or not screen_height then
@@ -97,7 +84,6 @@ function M.is_single_button_clicked(mouse_x, mouse_y, screen_width, screen_heigh
            mouse_y >= button_y and mouse_y <= button_y + button_height
 end
 
--- 检查是否点击了双人模式按钮
 function M.is_dual_button_clicked(mouse_x, mouse_y, screen_width, screen_height)
     -- 检查参数有效性
     if not mouse_x or not mouse_y or not screen_width or not screen_height then
@@ -114,11 +100,6 @@ function M.is_dual_button_clicked(mouse_x, mouse_y, screen_width, screen_height)
     
     return mouse_x >= button_x and mouse_x <= button_x + button_width and
            mouse_y >= button_y and mouse_y <= button_y + button_height
-end
-
--- 兼容性：保留旧的函数名
-function M.is_start_button_clicked(mouse_x, mouse_y, screen_width, screen_height)
-    return M.is_single_button_clicked(mouse_x, mouse_y, screen_width, screen_height)
 end
 
 return M

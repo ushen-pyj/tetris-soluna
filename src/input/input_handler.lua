@@ -1,10 +1,8 @@
--- 输入处理器
 local constants = require "src.core.constants"
 local input_config = require "src.config.input_config"
 
 local M = {}
 
--- 检查键码是否匹配键位
 local function is_key_match(code, keys)
     if type(keys) == "table" then
         for _, key in ipairs(keys) do
@@ -18,9 +16,7 @@ local function is_key_match(code, keys)
     return false
 end
 
--- 处理键盘输入
 function M.handle_key_input(code)
-    -- 处理移动
     if is_key_match(code, input_config.KEYS.MOVE_LEFT) then
         return "move", -1, 0
     elseif is_key_match(code, input_config.KEYS.MOVE_RIGHT) then
@@ -36,7 +32,6 @@ function M.handle_key_input(code)
     return nil
 end
 
--- 处理鼠标输入
 function M.handle_mouse_input(btn, down, logic_addr, game_over)
     if down and game_over then
         return "reset"
@@ -44,9 +39,7 @@ function M.handle_mouse_input(btn, down, logic_addr, game_over)
     return nil
 end
 
--- 处理双人模式键盘输入
 function M.handle_dual_key_input(code)
-    -- 检查Player 1的键位
     local p1_keys = constants.DUAL_KEYS.PLAYER1
     if code == p1_keys.MOVE_LEFT then
         return "move", 1
@@ -60,7 +53,6 @@ function M.handle_dual_key_input(code)
         return "hard_drop", 1
     end
     
-    -- 检查Player 2的键位
     local p2_keys = constants.DUAL_KEYS.PLAYER2
     if code == p2_keys.MOVE_LEFT then
         return "move", 2
@@ -77,7 +69,6 @@ function M.handle_dual_key_input(code)
     return nil, nil
 end
 
--- 获取移动方向
 function M.get_move_direction(code, player_id)
     local keys = (player_id == 1) and constants.DUAL_KEYS.PLAYER1 or constants.DUAL_KEYS.PLAYER2
     
