@@ -183,7 +183,7 @@ function callback.frame(count)
             cached_game_over = snapshot.game_over
             
             game_board.render(batch, globals.board_x, globals.board_y, snapshot)
-            side_panel.render(batch, globals.board_x, globals.board_y, snapshot, args.width)
+            side_panel.render(batch, globals.board_x, globals.board_y, snapshot, width, height)
             
             if snapshot.game_over then
                 globals.game_state = constants.GAME_STATES.GAME_OVER
@@ -215,13 +215,13 @@ function callback.frame(count)
         local text_size = 20
         local text_width = #game_over_text * text_size * 0.6
         local text_x = center_x - text_width / 2
-        renderer.render_text(batch, game_over_text, text_x, center_y - 10, text_size, colors.GAME_OVER_TEXT)
+        renderer.render_text(batch, game_over_text, text_x, center_y - 10, text_size, colors.GAME_OVER_TEXT, width, height)
         
         local restart_text = "Click to restart"
         local restart_size = 14
         local restart_width = #restart_text * restart_size * 0.6
         local restart_x = center_x - restart_width / 2
-        renderer.render_text(batch, restart_text, restart_x, center_y + 20, restart_size, colors.RESTART_TEXT)
+        renderer.render_text(batch, restart_text, restart_x, center_y + 20, restart_size, colors.RESTART_TEXT, width, height)
     end
 end
 

@@ -88,32 +88,32 @@ function M.render_next_piece_preview(batch, x, y, next_kind)
     return py + 4*preview_cell + 24
 end
 
-function M.render_score_display(batch, x, y, game_state)
-    local sx = x
+function M.render_score_display(batch, x, y, game_state, screen_width, screen_height)
+    local sx = x 
     local sy = y
     
     batch:layer(0, 0)
     
     local title_y = sy
-    M.render_text(batch, "SCORE", sx, title_y, 12, colors.SCORE_TITLE)
+    M.render_text(batch, "SCORE", sx, title_y, 12, colors.SCORE_TITLE, screen_width, screen_height)
     
     local score_y = title_y + 18
     local score_text = tostring(game_state.score)
-    M.render_text(batch, score_text, sx, score_y, 14, colors.SCORE_VALUE)
+    M.render_text(batch, score_text, sx, score_y, 14, colors.SCORE_VALUE, screen_width, screen_height)
     
     local level_y = score_y + 24
-    M.render_text(batch, "LEVEL", sx, level_y, 12, colors.LEVEL_TITLE)
+    M.render_text(batch, "LEVEL", sx, level_y, 12, colors.LEVEL_TITLE, screen_width, screen_height)
     
     local level_val_y = level_y + 18
     local level_text = tostring(game_state.level)
-    M.render_text(batch, level_text, sx, level_val_y, 14, colors.LEVEL_VALUE)
+    M.render_text(batch, level_text, sx, level_val_y, 14, colors.LEVEL_VALUE, screen_width, screen_height)
     
     local lines_y = level_val_y + 24
-    M.render_text(batch, "LINES", sx, lines_y, 12, colors.LINES_TITLE)
+    M.render_text(batch, "LINES", sx, lines_y, 12, colors.LINES_TITLE, screen_width, screen_height)
     
     local lines_val_y = lines_y + 18
     local lines_text = tostring(game_state.lines_cleared)
-    M.render_text(batch, lines_text, sx, lines_val_y, 14, colors.LINES_VALUE)
+    M.render_text(batch, lines_text, sx, lines_val_y, 14, colors.LINES_VALUE, screen_width, screen_height)
     
     batch:layer()
     
@@ -132,7 +132,7 @@ function M.debug_text(batch, text_primitives, x, y)
     end
 end
 
-function M.render_text(batch, str, x, y, size, color)
+function M.render_text(batch, str, x, y, size, color, width, height)
     if not str or str == "" then
         return
     end
@@ -141,42 +141,26 @@ function M.render_text(batch, str, x, y, size, color)
     color = color or colors.DEFAULT_TEXT
 
     local font_mgr = font_api.cobj()
-    if font_mgr then
-        local fixed_color = color
-        if (fixed_color & colors.ALPHA_MASK) == 0 then
-            fixed_color = fixed_color | colors.ALPHA_MASK
-        end
-        local font_id = 0
-        local name_ok, font_name_id = pcall(font_api.name, "")
-        if name_ok and font_name_id then
-            font_id = font_name_id
-        end
-
-
-        local test_size = size
-        local test_color = fixed_color
-
-        local block_ok, text_block = pcall(text_material.block, font_mgr, font_id, test_size, test_color, "")
-        if block_ok and text_block then
-            local prim_ok, text_primitives = pcall(text_block, str)
-            if prim_ok and text_primitives then
-                ---TODO ushen 为什么这里要-2046才能正常
-                local offset_y = y - 2046
-                batch:add(text_primitives, x, offset_y)
-                if game_config.debug then
-                    M.debug_text(batch, text_primitives, x, offset_y)
-                end
-                return
-            else
-                print("text_block failed for '" .. str .. "':", text_primitives)
-            end
-        else
-            print("Failed to create text block:", text_block)
-        end
-    else
-        print("Failed to get font manager object")
+    local fixed_color = color
+    if (fixed_color & colors.ALPHA_MASK) == 0 then
+        fixed_color = fixed_color | colors.ALPHA_MASK
+    end
+    local font_id = 0
+    local name_ok, font_name_id = pcall(font_api.name, "")
+    if name_ok and font_name_id then
+        font_id = font_name_id
     end
 
+    local test_size = size
+    local test_color = fixed_color
+    local text_block = text_material.block(font_mgr, font_id, test_size, test_color, "")
+    local text_primitives = text_block(str, width, height)
+    local font_info = font_api.size(font_id, test_size)
+    local offset_y = y - ((height - (font_info.ascent + font_info.descent - font_info.lineGap)) / 2)
+    batch:add(text_primitives, x, offset_y)
+    if game_config.debug then
+        M.debug_text(batch, text_primitives, x, offset_y)
+    end
 end
 
 function M.render_score_bar(batch, x, y, score)

@@ -38,15 +38,15 @@ function M.render_dual(batch, screen_width, screen_height, game_state)
         renderer.render_current_piece(batch, p2_board_x, board_y, game_state.player2.cur)
     end
 
-    text_renderer.render_text(batch, "PLAYER 1", p1_board_x + 10, board_y - 30, 14, colors.PLAYER1_LABEL)
-    text_renderer.render_text(batch, "PLAYER 2", p2_board_x + 10, board_y - 30, 14, colors.PLAYER2_LABEL)
+    text_renderer.render_text(batch, "PLAYER 1", p1_board_x + 10, board_y - 30, 14, colors.PLAYER1_LABEL, screen_width, screen_height)
+    text_renderer.render_text(batch, "PLAYER 2", p2_board_x + 10, board_y - 30, 14, colors.PLAYER2_LABEL, screen_width, screen_height)
 
     if game_state.player1.game_over then
         local game_over_text = "GAME OVER"
         local text_size = 12
         local text_width = #game_over_text * text_size * 0.6
         local text_x = p1_board_x + (board_width - text_width) / 2
-        text_renderer.render_text(batch, game_over_text, text_x, board_y + board_height / 2, text_size, colors.GAME_OVER_TEXT)
+        text_renderer.render_text(batch, game_over_text, text_x, board_y + board_height / 2, text_size, colors.GAME_OVER_TEXT, screen_width, screen_height)
     end
 
     if game_state.player2.game_over then
@@ -54,7 +54,7 @@ function M.render_dual(batch, screen_width, screen_height, game_state)
         local text_size = 12
         local text_width = #game_over_text * text_size * 0.6
         local text_x = p2_board_x + (board_width - text_width) / 2
-        text_renderer.render_text(batch, game_over_text, text_x, board_y + board_height / 2, text_size, colors.GAME_OVER_TEXT)
+        text_renderer.render_text(batch, game_over_text, text_x, board_y + board_height / 2, text_size, colors.GAME_OVER_TEXT, screen_width, screen_height)
     end
 end
 
