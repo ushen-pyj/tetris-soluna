@@ -16,6 +16,7 @@ M.board_y = 0
 M.screen_width = 480
 M.screen_height = 800
 
+
 -- 计算游戏板位置
 function M.calculate_board_position(screen_width, screen_height)
     M.screen_width = screen_width

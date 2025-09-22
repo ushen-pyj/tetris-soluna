@@ -1,13 +1,13 @@
--- 游戏板渲染模块
 local renderer = require "src.ui.renderer"
+local animated_renderer = require "src.ui.animated_renderer"
 local colors = require "src.core.colors"
+local text_renderer = require "src.ui.renderer"
 
 local M = {}
 
 function M.render(batch, board_x, board_y, game_state)
     renderer.render_game_board_background(batch, board_x, board_y)
-    
-    renderer.render_fixed_pieces(batch, board_x, board_y, game_state.grid)
+    animated_renderer.render_fixed_pieces_animated(batch, board_x, board_y, game_state.grid)
     
     if not game_state.game_over then
         renderer.render_current_piece(batch, board_x, board_y, game_state.cur)
@@ -26,19 +26,18 @@ function M.render_dual(batch, screen_width, screen_height, game_state)
 
     local p1_board_x = start_x
     renderer.render_game_board_background(batch, p1_board_x, board_y)
-    renderer.render_fixed_pieces(batch, p1_board_x, board_y, game_state.player1.grid)
+    animated_renderer.render_fixed_pieces_animated(batch, p1_board_x, board_y, game_state.player1.grid, 1)
     if not game_state.player1.game_over then
         renderer.render_current_piece(batch, p1_board_x, board_y, game_state.player1.cur)
     end
 
     local p2_board_x = start_x + board_width + spacing
     renderer.render_game_board_background(batch, p2_board_x, board_y)
-    renderer.render_fixed_pieces(batch, p2_board_x, board_y, game_state.player2.grid)
+    animated_renderer.render_fixed_pieces_animated(batch, p2_board_x, board_y, game_state.player2.grid, 2)
     if not game_state.player2.game_over then
         renderer.render_current_piece(batch, p2_board_x, board_y, game_state.player2.cur)
     end
 
-    local text_renderer = require "src.ui.renderer"
     text_renderer.render_text(batch, "PLAYER 1", p1_board_x + 10, board_y - 30, 14, colors.PLAYER1_LABEL)
     text_renderer.render_text(batch, "PLAYER 2", p2_board_x + 10, board_y - 30, 14, colors.PLAYER2_LABEL)
 

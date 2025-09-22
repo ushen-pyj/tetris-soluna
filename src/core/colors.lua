@@ -66,4 +66,9 @@ M.DEFAULT_TEXT = 0xFFFFFFFF      -- 默认文字颜色（白色，带alpha）
 M.ALPHA_MASK = 0xFF000000        -- Alpha通道掩码（用于确保颜色有alpha通道）
 M.NO_ALPHA_MASK = 0x00FFFFFF     -- 无alpha通道掩码（用于检查是否缺少alpha通道）
 
+-- 动画特效颜色
+M.CLEAR_ANIMATION = 0xFFFFFF     -- 消除动画颜色（白色）
+M.GLOW_WHITE = 0xFFFFFF          -- 发光白色
+M.FADE_BLACK = 0x000000          -- 淡化黑色
+
 return M

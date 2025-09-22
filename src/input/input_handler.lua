@@ -39,6 +39,13 @@ function M.handle_mouse_input(btn, down, logic_addr, game_over)
     return nil
 end
 
+function M.handle_mouse_input_main_thread(btn, down, game_over)
+    if down and game_over then
+        return "reset"
+    end
+    return nil
+end
+
 function M.handle_dual_key_input(code)
     local p1_keys = constants.DUAL_KEYS.PLAYER1
     if code == p1_keys.MOVE_LEFT then
