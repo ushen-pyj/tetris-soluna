@@ -155,8 +155,8 @@ function M.render_text(batch, str, x, y, size, color, width, height)
     local test_color = fixed_color
     local text_block = text_material.block(font_mgr, font_id, test_size, test_color, "")
     local text_primitives = text_block(str, width, height)
-    local font_info = font_api.size(font_id, test_size)
-    local offset_y = y - ((height - (font_info.ascent + font_info.descent - font_info.lineGap)) / 2)
+    local font_size = font_api.size(font_id, test_size)
+    local offset_y = y - ((height - (font_size.ascent + font_size.descent - font_size.lineGap)) / 2)
     batch:add(text_primitives, x, offset_y)
     if game_config.debug then
         M.debug_text(batch, text_primitives, x, offset_y)
