@@ -202,7 +202,7 @@ function callback.frame(count)
         local snapshot = unified_logic.get_state()
         if globals.game_mode == constants.GAME_MODES.SINGLE then
             game_board.render(batch, globals.board_x, globals.board_y, snapshot)
-            side_panel.render(batch, globals.board_x, globals.board_y, snapshot, args.width)
+            side_panel.render(batch, globals.board_x, globals.board_y, snapshot, width, height)
         else
             game_board.render_dual(batch, width, height, snapshot)
             side_panel.render_dual(batch, width, height, snapshot)
