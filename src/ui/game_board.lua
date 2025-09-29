@@ -10,6 +10,8 @@ function M.render(batch, board_x, board_y, game_state)
     animated_renderer.render_fixed_pieces_animated(batch, board_x, board_y, game_state.grid)
     
     if not game_state.game_over then
+        -- 先渲染影子方块，再渲染当前方块
+        renderer.render_ghost_piece(batch, board_x, board_y, game_state.grid, game_state.cur)
         renderer.render_current_piece(batch, board_x, board_y, game_state.cur)
     end
 end
@@ -28,6 +30,7 @@ function M.render_dual(batch, screen_width, screen_height, game_state)
     renderer.render_game_board_background(batch, p1_board_x, board_y)
     animated_renderer.render_fixed_pieces_animated(batch, p1_board_x, board_y, game_state.player1.grid, 1)
     if not game_state.player1.game_over then
+        renderer.render_ghost_piece(batch, p1_board_x, board_y, game_state.player1.grid, game_state.player1.cur)
         renderer.render_current_piece(batch, p1_board_x, board_y, game_state.player1.cur)
     end
 
@@ -35,6 +38,7 @@ function M.render_dual(batch, screen_width, screen_height, game_state)
     renderer.render_game_board_background(batch, p2_board_x, board_y)
     animated_renderer.render_fixed_pieces_animated(batch, p2_board_x, board_y, game_state.player2.grid, 2)
     if not game_state.player2.game_over then
+        renderer.render_ghost_piece(batch, p2_board_x, board_y, game_state.player2.grid, game_state.player2.cur)
         renderer.render_current_piece(batch, p2_board_x, board_y, game_state.player2.cur)
     end
 

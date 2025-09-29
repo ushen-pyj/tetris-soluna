@@ -20,6 +20,67 @@ function M.render_game_board_background(batch, board_x, board_y)
     batch:layer()
 end
 
+-- 计算影子方块应落到的行
+local function compute_ghost_row(grid, kind, rot, start_r, c)
+    local GRID_ROWS = constants.GRID_ROWS
+    local function can_place_at(r)
+        local m = M.shape_matrix(kind, rot)
+        for i=1,4 do
+            for j=1,4 do
+                if m[i][j] == 1 then
+                    local rr = r + i - 1
+                    local cc = c + j - 1
+                    if cc < 1 or cc > constants.GRID_COLS then
+                        return false
+                    end
+                    if rr > GRID_ROWS then
+                        return false
+                    end
+                    if rr >= 1 then
+                        if grid[rr][cc] then return false end
+                    end
+                end
+            end
+        end
+        return true
+    end
+
+    local r = start_r
+    while can_place_at(r+1) do
+        r = r + 1
+    end
+    return r
+end
+
+-- 渲染影子方块（半透明）
+function M.render_ghost_piece(batch, board_x, board_y, grid, current_piece)
+    if not current_piece or not current_piece.kind then return end
+
+    local ghost_r = compute_ghost_row(grid, current_piece.kind, current_piece.rot, current_piece.r, current_piece.c)
+    if not ghost_r then return end
+
+    local m = M.shape_matrix(current_piece.kind, current_piece.rot)
+    local base_col_rgb = constants.COLORS[current_piece.kind]
+    -- 叠加半透明alpha（约40%不透明度）
+    local ghost_col = (0x66 << 24) | base_col_rgb
+
+    batch:layer(board_x, board_y)
+    for i=1,4 do
+        for j=1,4 do
+            if m[i][j] == 1 then
+                local r = ghost_r + i - 1
+                local c = current_piece.c + j - 1
+                if r >= 1 then
+                    local x = (c-1) * constants.CELL_SIZE
+                    local y = (r-1) * constants.CELL_SIZE
+                    batch:add(quad.quad(constants.CELL_SIZE-4, constants.CELL_SIZE-4, ghost_col), x+2, y+2)
+                end
+            end
+        end
+    end
+    batch:layer()
+end
+
 function M.render_fixed_pieces(batch, board_x, board_y, grid)
     batch:layer(board_x, board_y)
     for r=1, constants.GRID_ROWS do
@@ -48,9 +109,11 @@ function M.render_current_piece(batch, board_x, board_y, current_piece)
             if m[i][j]==1 then
                 local r = current_piece.r + i - 1
                 local c = current_piece.c + j - 1
-                local x = (c-1) * constants.CELL_SIZE
-                local y = (r-1) * constants.CELL_SIZE
-                batch:add(quad.quad(constants.CELL_SIZE-4, constants.CELL_SIZE-4, col), x+2, y+2)
+                if r >= 1 then
+                    local x = (c-1) * constants.CELL_SIZE
+                    local y = (r-1) * constants.CELL_SIZE
+                    batch:add(quad.quad(constants.CELL_SIZE-4, constants.CELL_SIZE-4, col), x+2, y+2)
+                end
             end
         end
     end

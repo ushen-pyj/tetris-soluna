@@ -221,6 +221,11 @@ function M.update(current_time, delta_time)
             return
         end
 
+        -- 避免刚生成立即下落：首次更新时初始化last_drop_time
+        if s.last_drop_time == 0 then
+            s.last_drop_time = current_time
+        end
+
         if current_time - s.last_drop_time >= s.drop_interval then
             local player_data = { player = s.player, level = s.level, drop_interval = s.drop_interval }
             new_piece_if_needed(s.player, s.animation_state, player_data)
@@ -230,6 +235,9 @@ function M.update(current_time, delta_time)
         local d = state.dual
 
         if not d.player1.game_over and not d.animation_state1.is_animating then
+            if d.last_drop_time1 == 0 then
+                d.last_drop_time1 = current_time
+            end
             if current_time - d.last_drop_time1 >= d.drop_interval1 then
                 local player_data = { player = d.player1, level = d.level1, drop_interval = d.drop_interval1 }
                 new_piece_if_needed(d.player1, d.animation_state1, player_data)
@@ -238,6 +246,9 @@ function M.update(current_time, delta_time)
         end
 
         if not d.player2.game_over and not d.animation_state2.is_animating then
+            if d.last_drop_time2 == 0 then
+                d.last_drop_time2 = current_time
+            end
             if current_time - d.last_drop_time2 >= d.drop_interval2 then
                 local player_data = { player = d.player2, level = d.level2, drop_interval = d.drop_interval2 }
                 new_piece_if_needed(d.player2, d.animation_state2, player_data)

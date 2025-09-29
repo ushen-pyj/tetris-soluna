@@ -45,10 +45,16 @@ function BaseTetrisLogic.can_place(grid, kind, rot, r, c)
             if m[i][j] == 1 then
                 local rr = r + i - 1
                 local cc = c + j - 1
-                if rr < 1 or rr > GRID_ROWS or cc < 1 or cc > GRID_COLS then
+                if cc < 1 or cc > GRID_COLS then
                     return false
                 end
-                if grid[rr][cc] then return false end
+                if rr > GRID_ROWS then
+                    return false
+                end
+                -- 允许在棋盘上方（rr < 1）作为可放置区域
+                if rr >= 1 then
+                    if grid[rr][cc] then return false end
+                end
             end
         end
     end
@@ -62,7 +68,9 @@ function BaseTetrisLogic.lock_piece(player)
             if m[i][j]==1 then
                 local rr = player.cur.r + i - 1
                 local cc = player.cur.c + j - 1
-                player.grid[rr][cc] = player.cur.kind
+                if rr >= 1 and rr <= GRID_ROWS and cc >= 1 and cc <= GRID_COLS then
+                    player.grid[rr][cc] = player.cur.kind
+                end
             end 
         end 
     end
@@ -112,7 +120,26 @@ function BaseTetrisLogic.spawn(player)
     player.cur.kind = player.next_kind or BaseTetrisLogic.next_shape()
     player.next_kind = BaseTetrisLogic.next_shape()
     player.cur.rot = 1
-    player.cur.r = 1
+    -- 让方块的最上边实心行对齐到第1行，避免看起来从第2行开始
+    do
+        local m = BaseTetrisLogic.shape_matrix(player.cur.kind, player.cur.rot)
+        local top_i = 4
+        for i = 1, 4 do
+            local occupied = false
+            for j = 1, 4 do
+                if m[i][j] == 1 then
+                    occupied = true
+                    break
+                end
+            end
+            if occupied then
+                top_i = i
+                break
+            end
+        end
+        -- 计算初始r，使 top_i 对应的实际棋盘行 = 0（第一行之上）
+        player.cur.r = 1 - top_i
+    end
     player.cur.c = 4
     if not BaseTetrisLogic.can_place(player.grid, player.cur.kind, player.cur.rot, player.cur.r, player.cur.c) then
         player.game_over = true
