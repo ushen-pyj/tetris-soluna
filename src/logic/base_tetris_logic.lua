@@ -5,8 +5,10 @@ local BaseTetrisLogic = {}
 local GRID_COLS, GRID_ROWS
 local SHAPES
 
-local rng = math.random
-local bag = {"I","O","T","S","Z","J","L"}
+local SevenBag = require "src.utils.seven_bag"
+---@type SevenBag
+local bag_generator
+local KINDS = {"I","O","T","S","Z","J","L"}
 
 function BaseTetrisLogic.new_grid()
     local g = {}
@@ -19,7 +21,7 @@ function BaseTetrisLogic.new_grid()
 end
 
 function BaseTetrisLogic.next_shape()
-    return bag[rng(1, #bag)]
+    return bag_generator:next()
 end
 
 function BaseTetrisLogic.new_player_state()
@@ -51,7 +53,6 @@ function BaseTetrisLogic.can_place(grid, kind, rot, r, c)
                 if rr > GRID_ROWS then
                     return false
                 end
-                -- 允许在棋盘上方（rr < 1）作为可放置区域
                 if rr >= 1 then
                     if grid[rr][cc] then return false end
                 end
@@ -120,7 +121,6 @@ function BaseTetrisLogic.spawn(player)
     player.cur.kind = player.next_kind or BaseTetrisLogic.next_shape()
     player.next_kind = BaseTetrisLogic.next_shape()
     player.cur.rot = 1
-    -- 让方块的最上边实心行对齐到第1行，避免看起来从第2行开始
     do
         local m = BaseTetrisLogic.shape_matrix(player.cur.kind, player.cur.rot)
         local top_i = 4
@@ -137,7 +137,6 @@ function BaseTetrisLogic.spawn(player)
                 break
             end
         end
-        -- 计算初始r，使 top_i 对应的实际棋盘行 = 0（第一行之上）
         player.cur.r = 1 - top_i
     end
     player.cur.c = 4
@@ -223,6 +222,7 @@ function BaseTetrisLogic.init(config)
     GRID_COLS = config.GRID_COLS
     GRID_ROWS = config.GRID_ROWS
     SHAPES = config.SHAPES
+    bag_generator = SevenBag.new(KINDS)
 end
 
 function BaseTetrisLogic.get_config()
