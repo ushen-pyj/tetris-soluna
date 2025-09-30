@@ -15,7 +15,6 @@ local state = {
         drop_interval = game_config.DROP_INTERVAL,
         last_drop_time = 0,
         animation_state = {
-            is_animating = false,
             cleared_lines = {},
             current_animation = nil
         }
@@ -103,9 +102,7 @@ local function clear_lines_with_animation(player, animation_state, player_data, 
         end
     end
     if cleared > 0 then
-        animation_state.is_animating = true
-        animation_state.cleared_lines = cleared_rows
-
+        -- 收集要动画的方块（在清除之前）
         local blocks_to_animate = {}
         for _, row in ipairs(cleared_rows) do
             for col = 1, BaseTetrisLogic.get_config().GRID_COLS do
@@ -119,25 +116,25 @@ local function clear_lines_with_animation(player, animation_state, player_data, 
             end
         end
 
+        -- 立即执行游戏逻辑：清除行、计分、升级
+        perform_line_clear(player, cleared_rows)
+        
+        local gain = game_config.SCORE_BASE * cleared * (game_config.SCORE_MULTIPLIER ^ (cleared - 1))
+        player.score = player.score + gain
+        player.lines_cleared = player.lines_cleared + cleared
+        
+        update_level(player_data, cleared)
+
+        -- 创建纯视觉动画（不影响游戏逻辑）
         local anim_data = {
             type = "line_clear",
             blocks = blocks_to_animate,
-            duration = 1.0,
+            duration = 0.3,  -- 动画持续时间（秒）
             start_time = 0,
             easing = animation.EASING.EASE_OUT,
             on_complete = function()
-                perform_line_clear(player, cleared_rows)
-
-                local gain = game_config.SCORE_BASE * cleared * (game_config.SCORE_MULTIPLIER ^ (cleared - 1))
-                player.score = player.score + gain
-                player.lines_cleared = player.lines_cleared + cleared
-
-                update_level(player_data, cleared)
-
-                animation_state.is_animating = false
-                animation_state.cleared_lines = {}
+                -- 动画完成时只清理动画状态
                 animation_state.current_animation = nil
-
                 if on_complete then
                     on_complete(cleared)
                 end
@@ -147,8 +144,6 @@ local function clear_lines_with_animation(player, animation_state, player_data, 
         }
 
         animation_state.current_animation = anim_data
-
-        animated_renderer.start_main_thread_animation(anim_data)
 
         return cleared, cleared_rows
     end
@@ -176,7 +171,7 @@ function M.init(config, mode)
     state.mode = mode or constants.GAME_MODES.SINGLE
     state.running = true
     
-    if state.mode == constants.GAME_MODES.SINGLE then
+    if state.mode == constants.GAME_MODES.SINGLE or state.mode == constants.GAME_MODES.AUTO then
         state.single.player = BaseTetrisLogic.new_player_state()
         state.single.level = 1
         state.single.drop_interval = config.DROP_INTERVAL or game_config.DROP_INTERVAL
@@ -215,9 +210,9 @@ function M.update(current_time, delta_time)
     if not state.running then
         return
     end
-    if state.mode == constants.GAME_MODES.SINGLE then
+    if state.mode == constants.GAME_MODES.SINGLE or state.mode == constants.GAME_MODES.AUTO then
         local s = state.single
-        if s.player.game_over or s.animation_state.is_animating then
+        if s.player.game_over then
             return
         end
 
@@ -234,7 +229,7 @@ function M.update(current_time, delta_time)
     else
         local d = state.dual
 
-        if not d.player1.game_over and not d.animation_state1.is_animating then
+        if not d.player1.game_over then
             if d.last_drop_time1 == 0 then
                 d.last_drop_time1 = current_time
             end
@@ -245,7 +240,7 @@ function M.update(current_time, delta_time)
             end
         end
 
-        if not d.player2.game_over and not d.animation_state2.is_animating then
+        if not d.player2.game_over then
             if d.last_drop_time2 == 0 then
                 d.last_drop_time2 = current_time
             end
@@ -259,7 +254,7 @@ function M.update(current_time, delta_time)
 end
 
 function M.move(player_id, dx, dy)
-    if state.mode == constants.GAME_MODES.SINGLE then
+    if state.mode == constants.GAME_MODES.SINGLE or state.mode == constants.GAME_MODES.AUTO then
         return BaseTetrisLogic.move(state.single.player, dx, dy)
     else
         local player = (player_id == 1) and state.dual.player1 or state.dual.player2
@@ -268,7 +263,7 @@ function M.move(player_id, dx, dy)
 end
 
 function M.rotate(player_id)
-    if state.mode == constants.GAME_MODES.SINGLE then
+    if state.mode == constants.GAME_MODES.SINGLE or state.mode == constants.GAME_MODES.AUTO then
         return BaseTetrisLogic.rotate(state.single.player)
     else
         local player = (player_id == 1) and state.dual.player1 or state.dual.player2
@@ -277,7 +272,7 @@ function M.rotate(player_id)
 end
 
 function M.hard_drop(player_id)
-    if state.mode == constants.GAME_MODES.SINGLE then
+    if state.mode == constants.GAME_MODES.SINGLE or state.mode == constants.GAME_MODES.AUTO then
         local s = state.single
         if s.player.game_over then return end
 
@@ -319,7 +314,7 @@ function M.hard_drop(player_id)
 end
 
 function M.soft_drop_step(player_id)
-    if state.mode == constants.GAME_MODES.SINGLE then
+    if state.mode == constants.GAME_MODES.SINGLE or state.mode == constants.GAME_MODES.AUTO then
         local s = state.single
         if s.player.game_over then return end
         local player_data = { player = s.player, level = s.level, drop_interval = s.drop_interval }
@@ -342,7 +337,7 @@ function M.soft_drop_step(player_id)
 end
 
 function M.get_state()
-    if state.mode == constants.GAME_MODES.SINGLE then
+    if state.mode == constants.GAME_MODES.SINGLE or state.mode == constants.GAME_MODES.AUTO then
         local s = state.single
         return {
             grid = s.player.grid,
@@ -387,13 +382,12 @@ function M.get_state()
 end
 
 function M.reset()
-    if state.mode == constants.GAME_MODES.SINGLE then
+    if state.mode == constants.GAME_MODES.SINGLE or state.mode == constants.GAME_MODES.AUTO then
         local s = state.single
         BaseTetrisLogic.reset_player(s.player)
         s.level = 1
         s.drop_interval = game_config.DROP_INTERVAL
         s.last_drop_time = 0
-        s.animation_state.is_animating = false
         s.animation_state.cleared_lines = {}
         s.animation_state.current_animation = nil
     else
@@ -406,27 +400,16 @@ function M.reset()
         d.drop_interval2 = game_config.DROP_INTERVAL
         d.last_drop_time1 = 0
         d.last_drop_time2 = 0
-        d.animation_state1.is_animating = false
         d.animation_state1.cleared_lines = {}
         d.animation_state1.current_animation = nil
-        d.animation_state2.is_animating = false
         d.animation_state2.cleared_lines = {}
         d.animation_state2.current_animation = nil
     end
 end
 
 function M.is_animating(player_id)
-    if state.mode == constants.GAME_MODES.SINGLE then
-        return state.single.animation_state.is_animating
-    else
-        if player_id == 1 then
-            return state.dual.animation_state1.is_animating
-        elseif player_id == 2 then
-            return state.dual.animation_state2.is_animating
-        else
-            return state.dual.animation_state1.is_animating or state.dual.animation_state2.is_animating
-        end
-    end
+    -- 动画不再阻止游戏逻辑，此函数保留仅用于兼容性
+    return false
 end
 
 function M.get_mode()

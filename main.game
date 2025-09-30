@@ -2,5 +2,5 @@ entry : main.lua
 app.width : 480
 app.height : 800
 app.title : "Tetris - Soluna"
-service_path : "./?.lua;./service/?.lua;./src/?.lua"
+service_path : "./?.lua;./service/?.lua;./src/?.lua;./src/service/?.lua"
 

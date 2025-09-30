@@ -95,6 +95,7 @@ M.GAME_STATES = {
 M.GAME_MODES = {
     SINGLE = "single",
     DUAL = "dual",
+    AUTO = "auto",
 }
 
 return M

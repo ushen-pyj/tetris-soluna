@@ -61,7 +61,7 @@ function M.start_main_thread_animation(anim_data)
 end
 
 function M.sync_animation_from_snapshot(snapshot)
-    if globals.game_mode == constants.GAME_MODES.SINGLE then
+    if globals.game_mode == constants.GAME_MODES.SINGLE or globals.game_mode == constants.GAME_MODES.AUTO then
         local snapshot_animation = snapshot.current_animation
         if snapshot_animation and snapshot_animation.active then
             if not main_thread_animation or main_thread_animation ~= snapshot_animation then
@@ -98,47 +98,33 @@ end
 function M.render_fixed_pieces_animated(batch, board_x, board_y, grid, player_id)
     local current_animation
     
-    if globals.game_mode == constants.GAME_MODES.SINGLE then
+    if globals.game_mode == constants.GAME_MODES.SINGLE or globals.game_mode == constants.GAME_MODES.AUTO then
         current_animation = main_thread_animation
     else
         current_animation = (player_id == 1) and dual_animations.player1 or dual_animations.player2
     end
     
-    local animating_blocks = {}
-    
-    if current_animation then
-    end
-    
-    if current_animation and current_animation.active then
-        local block_count = 0
-        for i, block in ipairs(current_animation.blocks or {}) do
-            animating_blocks[block.row .. "_" .. block.col] = {
-                anim = current_animation,
-                block = block
-            }
-            block_count = block_count + 1
-        end
-    end
-    
+    -- 先渲染正常网格
     batch:layer(board_x, board_y)
     for r=1, constants.GRID_ROWS do
         for c=1, constants.GRID_COLS do
             local k = grid[r][c]
             if k then
-                local block_key = r .. "_" .. c
-                local anim_data = animating_blocks[block_key]
-                
-                if anim_data then
-                    M.render_animated_block(batch, r, c, k, anim_data.anim, anim_data.block)
-                else
-                    local col = constants.COLORS[k]
-                    local x = (c-1) * constants.CELL_SIZE
-                    local y = (r-1) * constants.CELL_SIZE
-                    batch:add(quad.quad(constants.CELL_SIZE-4, constants.CELL_SIZE-4, col), x+2, y+2)
-                end
+                local col = constants.COLORS[k]
+                local x = (c-1) * constants.CELL_SIZE
+                local y = (r-1) * constants.CELL_SIZE
+                batch:add(quad.quad(constants.CELL_SIZE-4, constants.CELL_SIZE-4, col), x+2, y+2)
             end
         end
     end
+    
+    -- 然后在上层独立渲染消除动画
+    if current_animation and current_animation.active then
+        for i, block in ipairs(current_animation.blocks or {}) do
+            M.render_animated_block(batch, block.row, block.col, block.color, current_animation, block)
+        end
+    end
+    
     batch:layer()
 end
 

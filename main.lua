@@ -39,6 +39,9 @@ local cached_game_over = false
 local cached_snapshot = nil
 local last_time = 0
 local logic_initialized = false
+local bot_addr = nil
+local pending_actions = nil
+local pending_resume_actions = nil -- 用于自动暂停后等待执行的剩余动作（通常仅硬降）
 
 local function ensure_logic()
     if not logic_initialized then
@@ -84,6 +87,16 @@ function callback.mouse_button(btn, down)
                 ensure_logic()
                 return
             end
+            if start_screen.is_auto_button_clicked(mouse_x, mouse_y, width, height) then
+                globals.game_mode = constants.GAME_MODES.AUTO
+                globals.game_state = constants.GAME_STATES.PLAYING
+                logic_initialized = false
+                ensure_logic()
+                -- 启动机器人服务
+                bot_addr = ltask.uniqueservice("robot")
+                pending_actions = nil
+                return
+            end
         end
         return
     end
@@ -121,6 +134,34 @@ function callback.key(code, down)
     end
     
     ensure_logic()
+
+    -- 自动模式：当启用了“每步暂停”并处于等待状态时，空格用于继续执行剩余动作（硬降）
+    if globals.game_mode == constants.GAME_MODES.AUTO and globals.auto_pause_enabled and globals.auto_pause_waiting then
+        if code == constants.KEYS.HARD_DROP then
+            if pending_resume_actions and #pending_resume_actions > 0 then
+                for i = 1, #pending_resume_actions do
+                    local act = pending_resume_actions[i]
+                    if act[1] == "move" then
+                        unified_logic.move(nil, act[2], 0)
+                    elseif act[1] == "rotate" then
+                        unified_logic.rotate()
+                    elseif act[1] == "hard_drop" then
+                        unified_logic.hard_drop()
+                    elseif act[1] == "soft_drop_step" then
+                        unified_logic.soft_drop_step()
+                    end
+                end
+            else
+                -- 兜底：若无缓存动作，至少执行一次硬降
+                unified_logic.hard_drop()
+            end
+            pending_resume_actions = nil
+            globals.auto_pause_waiting = false
+            return
+        end
+        -- 处于等待状态时，其他按键不处理
+        return
+    end
     
     if globals.game_mode == constants.GAME_MODES.SINGLE then
         if cached_game_over then 
@@ -161,6 +202,8 @@ function callback.key(code, down)
     end
 end
 
+local auto_first = false
+
 function callback.frame(count)
     do_font_init()
     local current_time = count / 60.0
@@ -171,22 +214,128 @@ function callback.frame(count)
         start_screen.render(batch, width, height)
     elseif globals.game_state == constants.GAME_STATES.PLAYING then
         ensure_logic()
-        unified_logic.update(current_time, delta_time)
+        local is_auto_waiting = (globals.game_mode == constants.GAME_MODES.AUTO) and globals.auto_pause_enabled and globals.auto_pause_waiting
+        if not is_auto_waiting then
+            unified_logic.update(current_time, delta_time)
+        end
         
         local snapshot = unified_logic.get_state()
         cached_snapshot = snapshot
         
         animated_renderer.sync_animation_from_snapshot(snapshot)
-        animated_renderer.update_animations(delta_time)
+        if not is_auto_waiting then
+            animated_renderer.update_animations(delta_time)
+        end
         
-        if globals.game_mode == constants.GAME_MODES.SINGLE then
+        if globals.game_mode == constants.GAME_MODES.SINGLE or globals.game_mode == constants.GAME_MODES.AUTO then
             cached_game_over = snapshot.game_over
             
             game_board.render(batch, globals.board_x, globals.board_y, snapshot)
             side_panel.render(batch, globals.board_x, globals.board_y, snapshot, width, height)
             
+            -- 自动模式执行
+            if globals.game_mode == constants.GAME_MODES.AUTO then
+                if snapshot and not snapshot.game_over then
+                    -- 若启用“每步暂停”且处于等待状态，不请求新决策也不执行动作
+                    if globals.auto_pause_enabled and globals.auto_pause_waiting and auto_first then
+                        -- 等待用户按空格继续
+                    else
+                        auto_first = true
+                        if not pending_actions then
+                        -- 请求一次决策
+                        if not bot_addr then
+                            bot_addr = ltask.uniqueservice("robot")
+                        end
+                        local ok, actions = pcall(ltask.call, bot_addr, "decide", snapshot)
+                            if ok and actions and #actions > 0 then
+                                pending_actions = actions
+                            else
+                                pending_actions = nil
+                            end
+                        end
+                        if pending_actions and #pending_actions > 0 then
+                            if globals.auto_pause_enabled then
+                                -- 只执行移动与旋转，留下硬降到空格触发
+                                local resume_actions = {}
+                                for i = 1, #pending_actions do
+                                    local act = pending_actions[i]
+                                    if act[1] == "move" then
+                                        unified_logic.move(nil, act[2], 0)
+                                    elseif act[1] == "rotate" then
+                                        unified_logic.rotate()
+                                    elseif act[1] == "hard_drop" then
+                                        table.insert(resume_actions, act)
+                                    elseif act[1] == "soft_drop_step" then
+                                        -- 若未来需要，也可选择提前执行或延后，这里保持原样留到继续时
+                                        table.insert(resume_actions, act)
+                                    end
+                                end
+                                pending_actions = nil
+                                pending_resume_actions = (#resume_actions > 0) and resume_actions or nil
+                                globals.auto_pause_waiting = true
+                            else
+                                -- 正常执行所有动作
+                                for i = 1, #pending_actions do
+                                    local act = pending_actions[i]
+                                    if act[1] == "move" then
+                                        unified_logic.move(nil, act[2], 0)
+                                    elseif act[1] == "rotate" then
+                                        unified_logic.rotate()
+                                    elseif act[1] == "hard_drop" then
+                                        unified_logic.hard_drop()
+                                    elseif act[1] == "soft_drop_step" then
+                                        unified_logic.soft_drop_step()
+                                    end
+                                end
+                                pending_actions = nil
+                            end
+                        end
+                    end
+                end
+            end
+
             if snapshot.game_over then
                 globals.game_state = constants.GAME_STATES.GAME_OVER
+                
+                -- 【调试】打印最终棋盘状态
+                if globals.game_mode == constants.GAME_MODES.AUTO then
+                    print("\n=== 游戏结束，最终棋盘状态 ===")
+                    print("最终得分:", snapshot.score)
+                    print("消除行数:", snapshot.lines_cleared)
+                    print("\n棋盘状态 (1=有方块, .=空):")
+                    for r = 1, #snapshot.grid do
+                        local line = string.format("第%2d行: ", r)
+                        for c = 1, #snapshot.grid[1] do
+                            line = line .. (snapshot.grid[r][c] and "1" or ".")
+                        end
+                        print(line)
+                    end
+                    
+                    -- 打印每列高度
+                    print("\n每列高度统计:")
+                    local heights = {}
+                    for c = 1, #snapshot.grid[1] do
+                        heights[c] = 0
+                        for r = 1, #snapshot.grid do
+                            if snapshot.grid[r][c] then
+                                heights[c] = #snapshot.grid - r + 1
+                                break
+                            end
+                        end
+                    end
+                    local height_line = "高度: "
+                    for c = 1, #heights do
+                        height_line = height_line .. string.format("%2d ", heights[c])
+                    end
+                    print(height_line)
+                    print("=====================================\n")
+                end
+                
+                -- 清理机器人
+                if bot_addr then
+                    pcall(ltask.syscall, bot_addr, "quit")
+                    bot_addr = nil
+                end
             end
         else
             cached_game_over = snapshot.player1.game_over and snapshot.player2.game_over
@@ -200,7 +349,7 @@ function callback.frame(count)
         end
     elseif globals.game_state == constants.GAME_STATES.GAME_OVER then
         local snapshot = unified_logic.get_state()
-        if globals.game_mode == constants.GAME_MODES.SINGLE then
+        if globals.game_mode == constants.GAME_MODES.SINGLE or globals.game_mode == constants.GAME_MODES.AUTO then
             game_board.render(batch, globals.board_x, globals.board_y, snapshot)
             side_panel.render(batch, globals.board_x, globals.board_y, snapshot, width, height)
         else

@@ -44,8 +44,13 @@ function M.render(batch, screen_width, screen_height)
     local dual_button_y = single_button_y + button_height + button_spacing
     render_button(batch, dual_button_x, dual_button_y, button_width, button_height, 
                   "DUAL PLAYER", 14, colors.BUTTON_BACKGROUND, colors.BUTTON_TEXT, colors.BUTTON_BORDER)
+
+    local auto_button_x = math.floor(center_x - button_width / 2)
+    local auto_button_y = dual_button_y + button_height + button_spacing
+    render_button(batch, auto_button_x, auto_button_y, button_width, button_height, 
+                  "AUTO (BOT)", 14, colors.BUTTON_BACKGROUND, colors.BUTTON_TEXT, colors.BUTTON_BORDER)
     
-    local controls_y = center_y + 80
+    local controls_y = center_y + 140
     local control_size = 11
     
     renderer.render_text(batch, "SINGLE PLAYER CONTROLS:", center_x - 80, controls_y, control_size, colors.CONTROL_HINT, screen_width, screen_height)
@@ -61,7 +66,7 @@ function M.render(batch, screen_width, screen_height)
     local hint_size = 12
     local hint_width = #hint_text * hint_size * 0.6
     local hint_x = math.floor(center_x - hint_width / 2)
-    local hint_y = center_y + 220
+    local hint_y = center_y + 280
     renderer.render_text(batch, hint_text, hint_x, hint_y, hint_size, colors.CLICK_HINT, screen_width, screen_height)
     
     batch:layer()
@@ -98,6 +103,21 @@ function M.is_dual_button_clicked(mouse_x, mouse_y, screen_width, screen_height)
     local button_x = center_x - button_width / 2
     local button_y = center_y - 30 + button_height + button_spacing
     
+    return mouse_x >= button_x and mouse_x <= button_x + button_width and
+           mouse_y >= button_y and mouse_y <= button_y + button_height
+end
+
+function M.is_auto_button_clicked(mouse_x, mouse_y, screen_width, screen_height)
+    if not mouse_x or not mouse_y or not screen_width or not screen_height then
+        return false
+    end
+    local center_x = screen_width / 2
+    local center_y = screen_height / 2
+    local button_width = 160
+    local button_height = 40
+    local button_spacing = 20
+    local button_x = center_x - button_width / 2
+    local button_y = center_y - 30 + (button_height + button_spacing) * 2
     return mouse_x >= button_x and mouse_x <= button_x + button_width and
            mouse_y >= button_y and mouse_y <= button_y + button_height
 end
