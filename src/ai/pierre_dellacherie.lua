@@ -43,6 +43,7 @@
 -- 7. Height Stddev: 列高度标准差（惩罚高度不平衡）
 
 local M = {}
+local BaseTetrisLogic = require "src.logic.base_tetris_logic"
 
 -- 调试控制：打印每个 evaluate 结果
 M.DEBUG_EVAL = false              -- 设为 true 开启逐摆放调试输出
@@ -64,7 +65,7 @@ M.WEIGHTS = {
 -- 计算方块着陆的高度
 -- landing_height = 方块重心的行号（从底部算起）
 local function calculate_landing_height(grid, kind, rot, final_row, final_col, SHAPES)
-    local m = M.get_shape_matrix(SHAPES, kind, rot)
+    local m = BaseTetrisLogic.shape_matrix(kind, rot)
     local rows = #grid
     local sum_r = 0
     local count = 0
@@ -87,7 +88,7 @@ end
 -- 计算消除的方块单元数（Eroded Piece Cells）
 -- eroded_cells = 消除的行数 × 本方块在被消除行中的方块数
 local function calculate_eroded_cells(grid_before, grid_after, kind, rot, final_row, final_col, SHAPES)
-    local m = M.get_shape_matrix(SHAPES, kind, rot)
+    local m = BaseTetrisLogic.shape_matrix(kind, rot)
     local rows = #grid_before
     
     -- 找出哪些行被消除了
@@ -295,13 +296,8 @@ local function calculate_wells(grid)
     return wells_sum
 end
 
--- 工具函数：获取形状矩阵
-function M.get_shape_matrix(SHAPES, kind, rot)
-    local mats = SHAPES[kind]
-    return mats[((rot - 1) % #mats) + 1]
-end
+-- 移除封装：调用处直接使用 BaseTetrisLogic.shape_matrix
 
--- 工具函数：克隆棋盘
 function M.clone_grid(grid)
     local g = {}
     for r = 1, #grid do
@@ -314,81 +310,11 @@ function M.clone_grid(grid)
     return g
 end
 
--- 工具函数：检查是否可以放置
-function M.can_place(grid, SHAPES, kind, rot, r, c)
-    local m = M.get_shape_matrix(SHAPES, kind, rot)
-    local rows = #grid
-    local cols = #grid[1]
-    
-    for i = 1, 4 do
-        for j = 1, 4 do
-            if m[i][j] == 1 then
-                local rr = r + i - 1
-                local cc = c + j - 1
-                if cc < 1 or cc > cols then return false end
-                if rr > rows then return false end
-                if rr >= 1 then
-                    if grid[rr][cc] then return false end
-                end
-            end
-        end
-    end
-    return true
-end
+-- 移除封装：调用处直接使用 BaseTetrisLogic.can_place
 
--- 工具函数：锁定方块到棋盘 TODO ushen这里有问题
-function M.lock_piece(grid, SHAPES, kind, rot, r, c)
-    local m = M.get_shape_matrix(SHAPES, kind, rot)
-    for i = 1, 4 do
-        for j = 1, 4 do
-            if m[i][j] == 1 then
-                local rr = r + i - 1
-                local cc = c + j - 1
-                if rr >= 1 and rr <= #grid and cc >= 1 and cc <= #grid[1] then
-                    grid[rr][cc] = kind
-                end
-            end
-        end
-    end
-end
+-- 移除封装：调用处直接包装 player 并调用 BaseTetrisLogic.lock_piece
 
--- 工具函数：清除完整行
-function M.clear_lines(grid)
-    local rows = #grid
-    local cols = #grid[1]
-    local new_rows = {}
-    local cleared = 0
-    
-    for r = rows, 1, -1 do
-        local full = true
-        for c = 1, cols do
-            if not grid[r][c] then
-                full = false
-                break
-            end
-        end
-        if full then
-            cleared = cleared + 1
-        else
-            table.insert(new_rows, grid[r])
-        end
-    end
-    
-    for i = 1, cleared do
-        local row = {}
-        for c = 1, cols do
-            row[c] = false
-        end
-        table.insert(new_rows, row)
-    end
-    
-    local rebuilt = {}
-    for i = #new_rows, 1, -1 do
-        table.insert(rebuilt, new_rows[i])
-    end
-    
-    return rebuilt, cleared
-end
+-- 移除封装：调用处直接包装 player 并调用 BaseTetrisLogic.clear_lines
 
 -- 评估一个落子位置
 -- 返回评分和详细信息
@@ -396,7 +322,7 @@ function M.evaluate_move(grid, SHAPES, kind, rot, col)
     local rows = #grid
     
     -- 找到形状的顶部
-    local m = M.get_shape_matrix(SHAPES, kind, rot)
+    local m = BaseTetrisLogic.shape_matrix(kind, rot)
     local top_i = 4
     for i = 1, 4 do
         local occ = false
@@ -414,7 +340,7 @@ function M.evaluate_move(grid, SHAPES, kind, rot, col)
     
     -- 从顶部开始下落
     local r = 1 - top_i
-    if not M.can_place(grid, SHAPES, kind, rot, r, col) then
+    if not BaseTetrisLogic.can_place(grid, kind, rot, r, col) then
         -- 调试：记录不可放置的位置
         if M.DEBUG_EVAL and (not M.DEBUG_FILTER_KIND or M.DEBUG_FILTER_KIND == kind) then
             print(string.format("[EVAL] kind=%s rot=%d col=%d -> INVALID", tostring(kind), rot, col))
@@ -423,7 +349,7 @@ function M.evaluate_move(grid, SHAPES, kind, rot, col)
     end
     
     -- 模拟下落到底部
-    while M.can_place(grid, SHAPES, kind, rot, r + 1, col) do
+    while BaseTetrisLogic.can_place(grid, kind, rot, r + 1, col) do
         r = r + 1
     end
     
@@ -432,10 +358,18 @@ function M.evaluate_move(grid, SHAPES, kind, rot, col)
     
     -- 锁定方块（在副本上）
     local grid_before = M.clone_grid(grid)
-    M.lock_piece(grid_before, SHAPES, kind, rot, r, col)
+    do
+        local player = { grid = grid_before, cur = { kind = kind, rot = rot, r = r, c = col } }
+        BaseTetrisLogic.lock_piece(player)
+    end
     
     -- 清除行
-    local grid_after, lines_cleared = M.clear_lines(grid_before)
+    local grid_after, lines_cleared
+    do
+        local player = { grid = grid_before, score = 0, lines_cleared = 0 }
+        local cleared = BaseTetrisLogic.clear_lines(player)
+        grid_after, lines_cleared = player.grid, cleared
+    end
     
     -- 计算各项特征
     local eroded_cells = calculate_eroded_cells(grid_before, grid_after, kind, rot, r, col, SHAPES)
@@ -505,7 +439,7 @@ function M.search_best_move(grid, SHAPES, kind, current_rot, current_col)
     
     -- 遍历所有可能的旋转和列
     for rot = 1, 4 do
-        for c = 1, cols do
+        for c = -4, cols + 4 do
             local score, details = M.evaluate_move(grid, SHAPES, kind, rot, c)
             -- 注意：evaluate_move 已在 DEBUG 模式下打印了有效和无效结果
             if score and score > best.score then

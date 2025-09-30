@@ -1,9 +1,10 @@
 local game_config = require "src.config.game_config"
-
+local constants = require "src.core.constants"
 local BaseTetrisLogic = {}
 
-local GRID_COLS, GRID_ROWS
-local SHAPES
+local GRID_COLS = constants.GRID_COLS
+local GRID_ROWS = constants.GRID_ROWS
+local SHAPES = constants.SHAPES
 
 local SevenBag = require "src.utils.seven_bag"
 ---@type SevenBag
