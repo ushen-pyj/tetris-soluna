@@ -205,6 +205,7 @@ end
 local auto_first = false
 
 function callback.frame(count)
+    count = count or 1
     do_font_init()
     local current_time = count / 60.0
     local delta_time = current_time - last_time
